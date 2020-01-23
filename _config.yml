@@ -21,7 +21,7 @@ sass:
   sass_dir: _sass
 
 # The base hostname & protocol of your site for where absolute urls are needed
-url: "http://4rzael.com"
+url: "https://4rzael.com"
 
 # Site navigation - each item must have a title and a url.
 navigation:
@@ -40,12 +40,12 @@ disqus:
 # Author information - author info at the bottom of the post
 author_name: "Maxime Agor"
 author_bio: "Maxime is an engineer, open-source/hardware/data enthusiast, specialized in computing. From electronics to machine learning, quantum computing, or game dev, he likes to try stuff out."
-author_url:  "http://4rzael.com"
+author_url:  "https://4rzael.com"
 author_location: "Bordeaux, France"
 author_image: /images/authorimage.png
 
 # Sidebar Add banner
-banner_url: "http://justgoodthemes.com"
+banner_url: "https://4rzael.com"
 banner_image: images/banner.jpg
 
 # Sidebar newsletter widget - add your form action url for MailChimp signup form here
