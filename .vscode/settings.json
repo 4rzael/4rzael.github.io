@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "ostream": "cpp",
+        "cstdint": "cpp",
+        "string_view": "cpp",
+        "tuple": "cpp"
+    }
+}
