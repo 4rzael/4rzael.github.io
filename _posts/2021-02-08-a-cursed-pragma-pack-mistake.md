@@ -67,6 +67,8 @@ struct Frame {
 
 To me, that second one looks much better, and having more compatibility sounds great. However, there's a catch.
 
+*Note:**[2]** While packing is cool, it can **seriously** impact code performance & size.*
+
 ## When shit hits the fan
 
 To understand how a problem can arise, I've setup a small code example [here](code/a-cursed-pragma-pack-mistake).
@@ -88,14 +90,102 @@ What is happening ? Our code is super simple !
 
 ## Headers & Compilation units
 
+To understand what's happening, it is important to know how a c++ code is compiled into a binary format.
+
+For performance reasons (being able to run on multiple threads, and avoiding to recompile everything when there's a change), c++ compilation is performed through *compilation units*.
+
+In general, each `.cpp` file has it's own compilation unit, and can thus be run concurrently.
+
+For each compilation unit (`.cpp` file), the precompiler will perform text replacements on macros and includes.
+This means that, for example, `#include "foo.hpp"` will be replaced by the content of the `.hpp` file, leading to a very large `.cpp` file containing all of the headers it needs.
+
+Once this is done, the compiler can compile the `cpp` file into an object (`.o`). It is able to use functions, classes, etc from other files, as the are **declared** in the `hpp`s, essentially telling the compiler *don't worry, this function exist, and has the following prototype. You can use it*.
+
+Most compilation errors are thrown at this stage of the compilation.
+
+Once all `.cpp` files are turned into `.o` files, it is necessary to put them all together into a binary one.
+
+This step is called the linking. One of its role is to find **definitions** for every symbol (function, class, etc) that has been declared in a `.hpp` and used in a `.cpp`.
+
+When it cannot find the **definition** in any compilation units, you'll get the `undefined reference to ...` error.
+If multiple compilation units define the same symbol, you'll get the `multiple definitions of ...` error.
+
+While this system works fairly well, some informations can be lost in the translation between tħe source files and the object files that are given to the linker. And when that happens, you get weird bugs.
+
+## Finding our problem
+
 ## Avoiding the problem
+
+There are multiple ways to avoid the problem
 
 ### Use pragma pack properly
 
-### Use __attribute__((packed))
+Either change
+```cpp
+#pragma pack(1)
+struct Frame {
+  enum class Type : uint8_t {
+    REQUEST = 0,
+    RESPONSE = 1
+  } type;
+
+  uint16_t length;
+  char content[32];
+};
+```
+to
+```cpp
+#pragma pack(1)
+struct Frame {
+  enum class Type : uint8_t {
+    REQUEST = 0,
+    RESPONSE = 1
+  } type;
+
+  uint16_t length;
+  char content[32];
+};
+#pragma pack()
+```
+
+or, even better:
+```cpp
+#pragma pack(push, 1)
+struct Frame {
+  enum class Type : uint8_t {
+    REQUEST = 0,
+    RESPONSE = 1
+  } type;
+
+  uint16_t length;
+  char content[32];
+};
+#pragma pack(pop)
+```
+
+### Use `__attribute__((packed))`
+
+It doesn't look as fancy, but at least, this method doesn't bring any side-effects with it.
+That's what I've decided to do from now on.
 
 ### Use a compiler that will give you warnings / errors
+
+If you ran `make build_clang` instead of `make build_gcc` when running the example, you'd have seen the following output:
+```
+Protocol.cpp:4:10: error: the current #pragma pack alignment value is modified in the included file [-Werror,-Wpragma-pack]
+#include "Frame.hpp"
+         ^
+./Frame.hpp:4:9: note: previous '#pragma pack' directive that modifies alignment is here
+#pragma pack(1)
+        ^
+```
+
+That's really cool, and I wish gcc had that.
+However, it is not always possible to choose which compiler we want to use.
+For example, some embedded targets (microcontrollers) are only supported on one compiler.
 
 # Footnotes
 
 **[1]** When possible, prefer using a proper serialization library ! This way, you won't have to manage endianess mismatches, backward compatibility, etc...
+
+**[2]** [Anybody who writes #pragma pack(1) may as well just wear a sign on their forehead that says “I hate RISC”](https://devblogs.microsoft.com/oldnewthing/20200103-00/?p=103290)
